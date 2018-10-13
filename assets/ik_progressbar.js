@@ -1,7 +1,8 @@
 ;(function ( $, window, document, undefined ) {
 	
 	var pluginName = 'ik_progressbar',
-		defaults = { // values can be overitten by passing configuration options to plugin constructor 
+		defaults = { 
+			'instructions': 'Press spacebar, or Enter to get progress',
 			'max': 100
 		};
 	
@@ -31,15 +32,34 @@
 		this.element
 			.attr({
 				'id': id,
+				'tabindex': -1, 
+        'role': 'progressbar',
+        'aria-valuenow': 0, 
+        'aria-valuemin': 0, 
+        'aria-valuemax': this.options.max, 
+        'aria-describedby': id + '_instructions' 
 			})
 			.addClass('ik_progressbar')
-      ;
+			.on('keydown.ik', {'plugin': this}, this.onKeyDown);
 		
 		this.fill = $('<div/>')
 			.addClass('ik_fill');
 			
-		this.notification = $('<div/>') // add div element to be used to notify about the status of download
+		this.notification = $('<div/>')
+			.attr({
+				'aria-live': 'assertive', 
+				'aria-atomic': 'additions'
+			}) 
 			.addClass('ik_readersonly')
+			.appendTo(this.element);
+
+		$('<div/>') 
+			.text(this.options.instructions)
+				.addClass('ik_readersonly')
+				.attr({
+					'id': id + '_instructions',
+					'aria-hidden': 'true'
+			})
 			.appendTo(this.element);
 
 		$('<div/>')
@@ -57,8 +77,8 @@
 	Plugin.prototype.getValue = function() {
 		
 		var value;
-		
-		value = Number( this.element.data('value') ); // inaccessible
+
+		value = Number( this.element.attr('aria-valuenow') );
 		
 		return parseInt( value );
 		
@@ -91,21 +111,32 @@
 		if (n >= this.options.max) {
 			val = this.options.max;
 			$el.attr({
-					'tabindex': -1
+				'tabindex': -1
 				});
 			this.notification.text('Loading complete');
 		} else {
 			val = n;
 		}
-		
 		this.element
-			.data({ // inaccessible
-				'value': parseInt(val) 
-			}) 
-      ;
+			.attr({ 
+				'aria-valuenow': val
+			});
 		
 		this.updateDisplay();
 		
+	};
+
+	/** Handles keydown event on progressbar element. */
+	Plugin.prototype.onKeyDown = function(event) {
+       
+    switch(event.keyCode) {
+			case ik_utils.keys.space:
+			case ik_utils.keys.enter:
+					event.preventDefault();
+					event.stopPropagation();
+					event.data.plugin.notify();
+					break;
+    }     
 	};
 	
 	/** Updates visual display. */
